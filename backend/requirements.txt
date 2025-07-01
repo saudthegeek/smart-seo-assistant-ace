@@ -1,0 +1,33 @@
+
+
+# 🔷 FastAPI API Server
+fastapi
+uvicorn[standard]
+pydantic
+requests
+
+# 🔷 Web Scraping / Content Gathering
+beautifulsoup4
+lxml
+aiohttp
+tldextract
+pytrends
+
+# 🔷 NLP + Preprocessing
+nltk
+spacy
+python-dotenv
+PyYAML
+
+# 🔷 Vector Search (for RAG)
+faiss-cpu       # local vector store
+sentence-transformers  # for embedding SEO content
+langchain
+
+# 🔷 LLM Integration
+openai
+tiktoken         # Token management for OpenAI
+
+# 🔷 Optional Utilities
+mlflow           # (Optional) experiment tracking
+pandas

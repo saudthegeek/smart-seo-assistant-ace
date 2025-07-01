@@ -1,0 +1,19 @@
+
+name: smart-seo-assistant-ace
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - fastapi
+  - uvicorn
+  - pydantic
+  - requests
+  - uvicorn[standard]
+  - pip
+  - pip:
+      - openai
+      - langchain
+      - langchain-openai
+      - pandas
+      - numpy
