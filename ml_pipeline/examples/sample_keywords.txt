@@ -1,0 +1,15 @@
+machine learning tutorial
+python programming guide
+web development basics
+data science introduction
+artificial intelligence explained
+javascript fundamentals
+react js tutorial
+node js development
+database design principles
+api development guide
+cloud computing overview
+cybersecurity best practices
+mobile app development
+software testing strategies
+version control with git

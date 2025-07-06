@@ -1,14 +1,48 @@
-pandas
-numpy
-scikit-learn
-openai
+# 🔷 FastAPI API Server
+fastapi
+uvicorn[standard]
+pydantic # For data validation and settings management
+requests # For making HTTP requests
+
+# 🔷 Web Scraping / Content Gathering
+beautifulsoup4 # For parsing HTML and XML documents
+requests-html  # For rendering JavaScript-heavy pages   
+lxml # For parsing HTML and XML documents
+aiohttp # For asynchronous HTTP requests
+tldextract # For extracting domain names
+pytrends # For Google Trends data
+
+# 🔷 NLP + Preprocessing
+nltk # For natural language processing
+spacy # For advanced natural language processing
+python-dotenv # For loading environment variables
+PyYAML # For YAML file parsing
+
+# 🔷 Vector Search (for RAG)
+faiss-cpu       # local vector store
+sentence-transformers  # for embedding SEO content
 langchain
-qdrant-client
-tqdm
-joblib
-pydantic
-pyyaml
-dvc
-dvc[gdrive]     # or s3, depending on remote
+qdrant-client # for vector database management
+
+# 🔷 LLM Integration
+openai
+tiktoken         # Token management for OpenAI
+
+# 🔷 Optional Utilities
+mlflow           # (Optional) experiment tracking
+pandas
+
+python-box==6.0.2  # For configuration management
+ensure==1.0.4  # For ensuring package versions
+tqdm  # For progress bars
+joblib # For parallel processing and caching
+
+dvc # Data Version Control
+dvc[gdrive]  # or s3, depending on remote
 matplotlib
 seaborn
+
+-e . # For local development, install the package in editable mode
+# pip install -r requirements.txt
+
+

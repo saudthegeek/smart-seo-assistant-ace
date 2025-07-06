@@ -1,33 +1,55 @@
-
-
 # 🔷 FastAPI API Server
-fastapi
-uvicorn[standard]
-pydantic
-requests
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+requests==2.31.0
+python-multipart==0.0.6
+
+# 🔷 Google Gemini AI Integration
+google-generativeai==0.8.5
 
 # 🔷 Web Scraping / Content Gathering
-beautifulsoup4
-lxml
-aiohttp
-tldextract
-pytrends
+beautifulsoup4==4.12.2
+lxml==4.9.3
+aiohttp==3.9.1
+tldextract==5.1.1
 
 # 🔷 NLP + Preprocessing
-nltk
-spacy
-python-dotenv
-PyYAML
+python-dotenv==1.0.0
+PyYAML==6.0.1
 
-# 🔷 Vector Search (for RAG)
-faiss-cpu       # local vector store
-sentence-transformers  # for embedding SEO content
-langchain
+# 🔷 Database & Storage
+# sqlite3 is built-in with Python
 
-# 🔷 LLM Integration
-openai
-tiktoken         # Token management for OpenAI
+# 🔷 CORS and Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+PyJWT==2.8.0
+
+# 🔷 Async File Operations
+aiofiles==24.1.0
+
+# 🔷 Development & Logging
+python-json-logger==2.0.7
+
+# 🔷 Local Pipeline Integration
+../ml_pipeline  # Our SEO pipeline package
+
+-e .  # Install backend package in development mode
 
 # 🔷 Optional Utilities
 mlflow           # (Optional) experiment tracking
 pandas
+
+python-box==6.0.2  # For configuration management
+ensure==1.0.4  # For ensuring package versions
+tqdm  # For progress bars
+joblib # For parallel processing and caching
+
+dvc # Data Version Control
+dvc[gdrive]  # or s3, depending on remote
+matplotlib
+seaborn
+
+-e . # For local development, install the package in editable mode
+# pip install -r requirements.txt

@@ -132,11 +132,11 @@ class ConfigurationManager:
         Raises:
             ValueError: If required configuration is missing
         """
-        # Get API key (required)
-        api_key = os.getenv("GOOGLE_API_KEY")
+        # Get API key (required) - check both GEMINI_API_KEY and GOOGLE_API_KEY for compatibility
+        api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError(
-                "GOOGLE_API_KEY environment variable is required. "
+                "GEMINI_API_KEY environment variable is required. "
                 "Get your key from: https://aistudio.google.com/app/apikey"
             )
         

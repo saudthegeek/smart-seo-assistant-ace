@@ -51,7 +51,7 @@ from .components.data_retrieval import DataRetriever
 from .components.content_generation import ContentGenerator
 
 # Utility imports
-from .utils import setup_logging, clean_text, extract_keywords
+from .utils import setup_logging, clean_text
 
 __all__ = [
     # Core classes
@@ -74,7 +74,6 @@ __all__ = [
     # Utilities
     "setup_logging",
     "clean_text",
-    "extract_keywords",
     
     # Metadata
     "__version__",
