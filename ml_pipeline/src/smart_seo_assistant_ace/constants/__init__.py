@@ -1,7 +1,10 @@
+import os
+
 # SEO Assistant Constants
 
 # API Configuration
-GEMINI_MODEL_NAME = "gemini-1.5-flash"
+# Default to Gemini for current generator implementation; allow override via COMPLETION_MODEL
+GEMINI_MODEL_NAME = os.getenv("COMPLETION_MODEL", "gemini-1.5-flash")
 DEFAULT_TIMEOUT = 10
 MAX_RETRIES = 3
 

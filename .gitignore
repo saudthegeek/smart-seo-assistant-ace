@@ -144,6 +144,32 @@ ENV/
 env.bak/
 venv.bak/
 
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.parcel-cache/
+*.log
+
+# Local databases and files
+*.db
+*.db-journal
+backend/seo_assistant.db
+backend/storage/uploads/
+backend/storage/*.json
+backend/storage/articles/
+backend/storage/analyses/
+backend/storage/briefs/
+backend/storage/calendars/
+
+# Python build and egg info
+ml_pipeline/src/smart_seo_assistant_ace.egg-info/
+ml_pipeline/build/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
 # Spyder project settings
 .spyderproject
 .spyproject

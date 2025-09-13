@@ -23,6 +23,11 @@ class DatabaseManager:
         """Initialize database and create tables"""
         self.connection = sqlite3.connect(self.db_path, check_same_thread=False)
         self.connection.row_factory = sqlite3.Row  # Enable dict-like access
+        # Enforce foreign key constraints
+        try:
+            self.connection.execute("PRAGMA foreign_keys = ON;")
+        except Exception:
+            pass
         
         # Create tables
         await self._create_tables()
@@ -126,10 +131,14 @@ class DatabaseManager:
         user_id = str(uuid.uuid4())
         cursor = self.connection.cursor()
         
-        cursor.execute("""
-            INSERT INTO users (id, email, password_hash, full_name)
-            VALUES (?, ?, ?, ?)
-        """, (user_id, user_data.email, password_hash, user_data.full_name))
+        try:
+            cursor.execute("""
+                INSERT INTO users (id, email, password_hash, full_name)
+                VALUES (?, ?, ?, ?)
+            """, (user_id, user_data.email, password_hash, user_data.full_name))
+        except sqlite3.IntegrityError as e:
+            # Likely UNIQUE constraint failed on email
+            raise ValueError("User with this email already exists") from e
         
         self.connection.commit()
         

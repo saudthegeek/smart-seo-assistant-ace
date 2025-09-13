@@ -14,7 +14,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Security configuration
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-this-in-production")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-insecure-change-me")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -28,6 +28,8 @@ class AuthManager:
     
     def __init__(self, db_manager):
         self.db_manager = db_manager
+        if SECRET_KEY == "dev-insecure-change-me":
+            logger.warning("JWT secret is using an insecure default. Set JWT_SECRET_KEY in environment for production.")
     
     def hash_password(self, password: str) -> str:
         """Hash a password"""

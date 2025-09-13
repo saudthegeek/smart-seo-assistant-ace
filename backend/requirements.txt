@@ -32,10 +32,8 @@ aiofiles==24.1.0
 # 🔷 Development & Logging
 python-json-logger==2.0.7
 
-# 🔷 Local Pipeline Integration
-../ml_pipeline  # Our SEO pipeline package
-
--e .  # Install backend package in development mode
+# (Optional) Local Backend (editable install) — install separately if needed
+# -e .
 
 # 🔷 Optional Utilities
 mlflow           # (Optional) experiment tracking
@@ -50,6 +48,5 @@ dvc # Data Version Control
 dvc[gdrive]  # or s3, depending on remote
 matplotlib
 seaborn
-
--e . # For local development, install the package in editable mode
+# Already included above as editable install
 # pip install -r requirements.txt

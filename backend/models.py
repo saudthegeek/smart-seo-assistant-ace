@@ -28,6 +28,11 @@ class TokenResponse(BaseModel):
     expires_in: int
 
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
 # Project management models
 class ProjectCreate(BaseModel):
     name: str = Field(..., description="Project name")

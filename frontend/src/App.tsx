@@ -1,9 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
 import './App.css'
 
-// API Base URL
-const API_BASE_URL = 'http://localhost:8000'
+// API Base URL (configurable via Vite env: VITE_API_BASE)
+const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE || 'http://127.0.0.1:8000'
+
+// Configure axios instance
+axios.defaults.baseURL = API_BASE_URL
+axios.defaults.timeout = 20000
 
 // Types
 interface AnalysisResult {
@@ -50,6 +54,21 @@ function App() {
   // const [task, setTask] = useState<Task | null>(null)
   const [error, setError] = useState('')
 
+  // Auth state
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const isAuthed = Boolean(token)
+
+  // Attach token to axios default headers when it changes
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    } else {
+      delete axios.defaults.headers.common['Authorization']
+    }
+  }, [token])
+
   // Keywords for bulk processing
   // const [bulkKeywords, setBulkKeywords] = useState('')
   // const [bulkResults, setBulkResults] = useState<any>(null)
@@ -71,7 +90,12 @@ function App() {
       })
       setAnalysis(response.data)
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Analysis failed')
+      // 401 means not authenticated
+      if (err.response?.status === 401) {
+        setError('Not authenticated. Please log in first.')
+      } else {
+        setError(err.response?.data?.detail || 'Analysis failed')
+      }
     } finally {
       setLoading(false)
     }
@@ -89,7 +113,11 @@ function App() {
       })
       setBrief(response.data)
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Brief generation failed')
+      if (err.response?.status === 401) {
+        setError('Not authenticated. Please log in first.')
+      } else {
+        setError(err.response?.data?.detail || 'Brief generation failed')
+      }
     } finally {
       setLoading(false)
     }
@@ -170,18 +198,88 @@ function App() {
   }
   */
 
+  const handleLogin = async () => {
+    setError('')
+    if (!email.trim() || !password.trim()) {
+      setError('Email and password are required')
+      return
+    }
+    try {
+      const res = await axios.post(`/auth/login`, { email, password })
+      setToken(res.data.access_token)
+      localStorage.setItem('token', res.data.access_token)
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || err?.message || 'Login failed'
+      setError(String(msg))
+    }
+  }
+
+  const handleRegister = async () => {
+    setError('')
+    if (!email.trim() || !password.trim()) {
+      setError('Email and password are required')
+      return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+    try {
+      await axios.post(`/auth/register`, { email, password, full_name: email.split('@')[0] || 'User' })
+      await handleLogin()
+    } catch (err: any) {
+      const msg = err?.response?.data?.detail || err?.message || 'Registration failed'
+      setError(String(msg))
+    }
+  }
+
+  const handleLogout = () => {
+    setToken(null)
+    localStorage.removeItem('token')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+      <header className="bg-white shadow-sm border-b w-full">
+        <div className="w-full px-4 py-6">
           <h1 className="text-3xl font-bold text-gray-900">🚀 Smart SEO Assistant</h1>
           <p className="text-gray-600 mt-2">AI-powered SEO content planning and generation</p>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+  <main className="w-full mx-auto px-4 py-8">
+        {/* Auth Bar */}
+        <div className="bg-white rounded-lg p-4 mb-6 shadow-sm flex flex-col md:flex-row md:items-end gap-3">
+          <div className="text-sm text-gray-600 flex-1">{isAuthed ? 'Authenticated' : 'Not authenticated'}</div>
+          {!isAuthed ? (
+            <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex gap-2">
+                <button onClick={handleLogin} className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">Log in</button>
+                <button onClick={handleRegister} className="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800">Register</button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600">Log out</button>
+            </div>
+          )}
+        </div>
         {/* Tab Navigation */}
         <div className="mb-8">
           <nav className="flex space-x-8">
@@ -195,7 +293,7 @@ function App() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors $\{
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'bg-blue-500 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50'

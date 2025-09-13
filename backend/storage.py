@@ -11,6 +11,7 @@ from typing import Optional, Dict, Any, List
 import logging
 from datetime import datetime
 import uuid
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,11 @@ class StorageManager:
         
         # Create directories if they don't exist
         self._create_directories()
+
+    def _sanitize_filename(self, name: str) -> str:
+        """Sanitize provided filename components to prevent path traversal and unsafe chars"""
+        name = re.sub(r"[^A-Za-z0-9_.-]+", "_", name)
+        return name.strip("._") or "item"
     
     def _create_directories(self):
         """Create storage directories"""
@@ -48,7 +54,7 @@ class StorageManager:
             # Generate unique filename
             article_id = str(uuid.uuid4())
             timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            filename = f"{timestamp}_{article_id}.json"
+            filename = self._sanitize_filename(f"{timestamp}_{article_id}.json")
             
             # Add metadata
             article_data.update({
@@ -77,7 +83,7 @@ class StorageManager:
             # Generate unique filename
             analysis_id = str(uuid.uuid4())
             timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            filename = f"{timestamp}_{analysis_id}.json"
+            filename = self._sanitize_filename(f"{timestamp}_{analysis_id}.json")
             
             # Add metadata
             analysis_data.update({
@@ -106,7 +112,7 @@ class StorageManager:
             # Generate unique filename
             brief_id = str(uuid.uuid4())
             timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            filename = f"{timestamp}_{brief_id}.json"
+            filename = self._sanitize_filename(f"{timestamp}_{brief_id}.json")
             
             # Add metadata
             brief_data.update({
@@ -135,7 +141,7 @@ class StorageManager:
             # Generate unique filename
             calendar_id = str(uuid.uuid4())
             timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            filename = f"{timestamp}_{calendar_id}.json"
+            filename = self._sanitize_filename(f"{timestamp}_{calendar_id}.json")
             
             # Add metadata
             calendar_data.update({

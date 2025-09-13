@@ -183,9 +183,9 @@ class ConfigurationManager:
                 print(f"Error: Missing required configuration: {key}")
                 return False
         
-        # Validate API key
-        if not os.getenv("GOOGLE_API_KEY"):
-            print("Error: GOOGLE_API_KEY environment variable not found")
+        # Validate API key (accept GEMINI_API_KEY or GOOGLE_API_KEY for compatibility)
+        if not (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")):
+            print("Error: GEMINI_API_KEY (or GOOGLE_API_KEY) environment variable not found")
             return False
         
         # Validate numeric values

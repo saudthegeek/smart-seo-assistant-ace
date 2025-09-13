@@ -7,11 +7,24 @@ import sys
 import os
 from pathlib import Path
 
+# Load environment variables from project root .env early so auth/JWT picks them up
+try:
+    from dotenv import load_dotenv  # type: ignore
+    ROOT_DOTENV = Path(__file__).parent.parent / ".env"
+    if ROOT_DOTENV.exists():
+        load_dotenv(dotenv_path=ROOT_DOTENV)
+    else:
+        # Fallback to default search
+        load_dotenv()
+except Exception:
+    # dotenv is optional; continue if not available
+    pass
+
 # Add the ml_pipeline to Python path
 ml_pipeline_path = Path(__file__).parent.parent / "ml_pipeline" / "src"
 sys.path.append(str(ml_pipeline_path))
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
@@ -41,9 +54,9 @@ from models import (
     ContentBriefRequest, ContentBriefResponse,
     BulkProcessRequest, BulkProcessResponse,
     ContentCalendarRequest, ContentCalendarResponse,
-    UserCreate, UserResponse, TokenResponse
+    UserCreate, UserResponse, TokenResponse, LoginRequest
 )
-from auth import AuthManager
+from auth import AuthManager, get_current_active_user
 from storage import StorageManager
 
 # Initialize FastAPI app
@@ -58,11 +71,27 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # React/Vite dev servers
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+    ],  # React/Vite dev servers
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security headers middleware
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    # Basic security headers; tune as needed
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "geolocation=()"
+    return response
 
 # Security
 security = HTTPBearer()
@@ -139,9 +168,29 @@ async def health_check():
     }
 
 
+# Root route to avoid 404 on base URL
+@app.get("/")
+async def root():
+    """Root endpoint providing helpful links and basic info"""
+    return {
+        "service": "Smart SEO Assistant API",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "health": "/health",
+        "endpoints": {
+            "analyze": "POST /seo/analyze",
+            "brief": "POST /seo/brief",
+            "article": "POST /seo/article",
+            "bulk": "POST /seo/bulk",
+            "calendar": "POST /seo/calendar",
+            "tasks": "GET /tasks/{task_id}"
+        }
+    }
+
+
 # SEO Analysis endpoints
 @app.post("/seo/analyze")
-async def analyze_keyword(request: dict):
+async def analyze_keyword(request: dict, current_user: dict = Depends(get_current_active_user)):
     """Analyze a keyword and return SEO insights"""
     if not pipeline:
         raise HTTPException(status_code=500, detail="Pipeline not initialized")
@@ -150,8 +199,11 @@ async def analyze_keyword(request: dict):
         keyword = request.get("keyword", "")
         goal = request.get("goal", "")
         
-        if not keyword:
+        if not keyword or not isinstance(keyword, str):
             raise HTTPException(status_code=400, detail="Keyword is required")
+        keyword = keyword.strip()
+        if len(keyword) < 2 or len(keyword) > 200:
+            raise HTTPException(status_code=400, detail="Keyword length must be between 2 and 200 characters")
         
         # Get SEO context using our pipeline
         context = pipeline.retrieve_context(keyword, goal)
@@ -178,8 +230,50 @@ async def analyze_keyword(request: dict):
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 
+# Auth endpoints
+@app.post("/auth/register", response_model=UserResponse)
+async def register_user(user: UserCreate):
+    """Register a new user and return user info"""
+    try:
+        if not user.email or not user.password or not user.full_name:
+            raise HTTPException(status_code=400, detail="email, password and full_name are required")
+        # Create user in DB
+        password_hash = auth_manager.hash_password(user.password)
+        created = await db_manager.create_user(user, password_hash)
+        # Normalize created_at for response
+        return UserResponse(
+            id=created["id"],
+            email=created["email"],
+            full_name=created["full_name"],
+            created_at=created["created_at"],
+            is_active=True,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/auth/login", response_model=TokenResponse)
+async def login_user(credentials: LoginRequest):
+    """Authenticate user and return JWT token"""
+    try:
+        user = await auth_manager.authenticate_user(credentials.email, credentials.password)
+        if not user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        # Issue token
+        access_token = auth_manager.create_access_token({
+            "sub": user["id"],
+            "email": user["email"],
+            "full_name": user.get("full_name", "")
+        })
+        return TokenResponse(access_token=access_token, expires_in=1800)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.post("/seo/brief")
-async def generate_content_brief(request: dict):
+async def generate_content_brief(request: dict, current_user: dict = Depends(get_current_active_user)):
     """Generate SEO-optimized content brief"""
     if not pipeline:
         raise HTTPException(status_code=500, detail="Pipeline not initialized")
@@ -188,8 +282,11 @@ async def generate_content_brief(request: dict):
         keyword = request.get("keyword", "")
         goal = request.get("goal", "")
         
-        if not keyword:
+        if not keyword or not isinstance(keyword, str):
             raise HTTPException(status_code=400, detail="Keyword is required")
+        keyword = keyword.strip()
+        if len(keyword) < 2 or len(keyword) > 200:
+            raise HTTPException(status_code=400, detail="Keyword length must be between 2 and 200 characters")
         
         # Generate content brief using our pipeline
         brief = pipeline.generate_content_brief(keyword, goal)
@@ -212,7 +309,7 @@ async def generate_content_brief(request: dict):
 
 
 @app.post("/seo/article")
-async def generate_full_article(request: dict, background_tasks: BackgroundTasks):
+async def generate_full_article(request: dict, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_active_user)):
     """Generate full SEO article (background task)"""
     if not pipeline:
         raise HTTPException(status_code=500, detail="Pipeline not initialized")
@@ -220,8 +317,11 @@ async def generate_full_article(request: dict, background_tasks: BackgroundTasks
     keyword = request.get("keyword", "")
     goal = request.get("goal", "")
     
-    if not keyword:
+    if not keyword or not isinstance(keyword, str):
         raise HTTPException(status_code=400, detail="Keyword is required")
+    keyword = keyword.strip()
+    if len(keyword) < 2 or len(keyword) > 200:
+        raise HTTPException(status_code=400, detail="Keyword length must be between 2 and 200 characters")
     
     # Create background task
     task_id = str(uuid.uuid4())
@@ -241,7 +341,7 @@ async def generate_full_article(request: dict, background_tasks: BackgroundTasks
 
 
 @app.post("/seo/bulk")
-async def bulk_process_keywords(request: dict):
+async def bulk_process_keywords(request: dict, current_user: dict = Depends(get_current_active_user)):
     """Process multiple keywords in bulk"""
     if not pipeline:
         raise HTTPException(status_code=500, detail="Pipeline not initialized")
@@ -249,8 +349,12 @@ async def bulk_process_keywords(request: dict):
     keywords = request.get("keywords", [])
     goal = request.get("goal", "")
     
-    if not keywords:
+    if not keywords or not isinstance(keywords, list):
         raise HTTPException(status_code=400, detail="Keywords list is required")
+    # Normalize and basic validation
+    keywords = [str(k).strip() for k in keywords if str(k).strip()]
+    if any(len(k) < 2 or len(k) > 200 for k in keywords):
+        raise HTTPException(status_code=400, detail="Each keyword must be 2-200 characters")
     
     if len(keywords) > 50:
         raise HTTPException(status_code=400, detail="Maximum 50 keywords allowed")
@@ -280,7 +384,7 @@ async def bulk_process_keywords(request: dict):
 
 
 @app.post("/seo/calendar")
-async def create_content_calendar(request: dict):
+async def create_content_calendar(request: dict, current_user: dict = Depends(get_current_active_user)):
     """Create content calendar for keywords"""
     if not pipeline:
         raise HTTPException(status_code=500, detail="Pipeline not initialized")
@@ -289,8 +393,11 @@ async def create_content_calendar(request: dict):
     goal = request.get("goal", "")
     timeframe_weeks = request.get("timeframe_weeks", 4)
     
-    if not keywords:
+    if not keywords or not isinstance(keywords, list):
         raise HTTPException(status_code=400, detail="Keywords list is required")
+    keywords = [str(k).strip() for k in keywords if str(k).strip()]
+    if any(len(k) < 2 or len(k) > 200 for k in keywords):
+        raise HTTPException(status_code=400, detail="Each keyword must be 2-200 characters")
     
     if len(keywords) > 100:
         raise HTTPException(status_code=400, detail="Maximum 100 keywords allowed for calendar")
